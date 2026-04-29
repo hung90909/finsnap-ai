@@ -6,17 +6,16 @@ from typing import List
 
 app = FastAPI()
 
-# ⚠️ QUAN TRỌNG: Phải có đoạn này để cho phép Github gọi
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Cho phép tất cả domain gọi
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL ='openrouter/free'
+MODEL = "openrouter/free"
 
 class FinancialData(BaseModel):
     ticker: str
@@ -58,3 +57,8 @@ async def explain(data: FinancialData):
 
 @app.get("/")
 def health(): return {"status": "FinSnap AI OK"}
+
+# Thêm route này để xử lý preflight
+@app.options("/{rest_of_path:path}")
+async def preflight_handler():
+    return {"status": "ok"}
