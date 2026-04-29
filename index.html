@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinSnap - AI Phân Tích Báo Cáo Tài Chính</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    
+    .gradient-bg {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .score-ring {
+        transform: rotate(-90deg);
+        transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+    
+    .loading-dot {
+        animation: bounce 1.4s infinite ease-in-out both;
+    }
+    
+    .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+    
+    .shimmer {
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+</style>
+</head>
+<body class="gradient-bg min-h-screen text-slate-100">
+    
+    <!-- Main Container -->
+    <div id="app" class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+        
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-8 md:mb-12">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                    <i data-lucide="zap" class="w-6 h-6 text-slate-900"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">FinSnap</h1>
+                    <p class="text-xs text-slate-400 -mt-1">AI đọc BCTC cho GenZ</p>
+                </div>
+            </div>
+            <button id="proBtnHeader" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-orange-500/30 transition-all">
+                <i data-lucide="crown" class="w-4 h-4"></i>
+                Nâng cấp Pro
+            </button>
+        </header>
+
+        <!-- Landing Screen -->
+        <section id="landingScreen" class="fade-in-up">
+            <div class="text-center mb-8 md:mb-12">
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">
+                    Phân tích báo cáo tài chính<br>
+                    <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">như dân chuyên trong 30s</span>
+                </h2>
+                <p class="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">
+                    Nhập mã cổ phiếu hoặc upload PDF BCTC. AI sẽ scan & tóm tắt chỉ số quan trọng nhất cho bạn.
+                </p>
+            </div>
+
+            <!-- Search & Upload Card -->
+            <div class="glass-card rounded-2xl p-6 md:p-8 max-w-3xl mx-auto shadow-2xl">
+                <div class="space-y-4">
+                    <!-- Ticker Input -->
+                    <div>
+                        <label class="text-sm font-medium text-slate-300 mb-2 block">Nhập mã cổ phiếu</label>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                            <input 
+                                id="tickerInput" 
+                                type="text" 
+                                placeholder="VD: FPT, HPG, VNM..." 
+                                class="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-12 pr-4 py-4 text-lg font-semibold uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                                maxlength="3"
+                            >
+                        </div>
+                        <div class="flex gap-2 mt-3 flex-wrap">
+                            <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">FPT</button>
+                            <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">HPG</button>
+                            <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">VNM</button>
+                            <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">VCB</button>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-slate-700"></div>
+                        </div>
+                        <div class="relative flex justify-center text-xs">
+                            <span class="bg-slate-900 px-3 text-slate-500">hoặc</span>
+                        </div>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div>
+                        <label for="pdfUpload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 hover:bg-slate-900/30 transition-all group">
+                            <i data-lucide="file-up" class="w-8 h-8 text-slate-500 group-hover:text-emerald-400 mb-2"></i>
+                            <p class="text-sm text-slate-400 group-hover:text-slate-300">
+                                <span class="font-semibold">Tải lên PDF BCTC</span>
+                            </p>
+                            <p class="text-xs text-slate-600 mt-1">Quý 2/2024, cả năm 2023,...</p>
+                            <input id="pdfUpload" type="file" class="hidden" accept=".pdf">
+                        </label>
+                    </div>
+
+                    <button 
+                        id="analyzeBtn"
+                        class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-900 font-bold py-4 rounded-xl hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        Phân tích ngay
+                    </button>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="grid md:grid-cols-3 gap-4 mt-12 max-w-4xl mx-auto">
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-emerald-400"></i>
+                    </div>
+                    <h3 class="font-semibold mb-1">Score 0-100</h3>
+                    <p class="text-xs text-slate-400">Chấm điểm sức khoẻ tài chính trực quan</p>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="brain" class="w-6 h-6 text-cyan-400"></i>
+                    </div>
+                    <h3 class="font-semibold mb-1">AI Giải thích</h3>
+                    <p class="text-xs text-slate-400">Nói tiếng người, không thuật ngữ khó</p>
+                </div>
+                <div class="glass-card rounded-xl p-5 text-center">
+                    <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <h3 class="font-semibold mb-1">Cảnh báo Red Flag</h3>
+                    <p class="text-xs text-slate-400">Phát hiện rủi ro ẩn trong báo cáo</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading Screen -->
+        <section id="loadingScreen" class="hidden">
+            <div class="max-w-2xl mx-auto text-center mt-20">
+                <div class="w-20 h-20 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-emerald-500/30">
+                    <i data-lucide="cpu" class="w-10 h-10 text-slate-900 animate-pulse"></i>
+                </div>
+                
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">AI đang phân tích...</h2>
+                <p class="text-slate-400 mb-12" id="loadingTicker">Mã: FPT - Q2/2024</p>
+
+                <div class="space-y-6 max-w-md mx-auto">
+                    <div id="step1" class="glass-card rounded-xl p-5 flex items-center gap-4 opacity-50 transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center step-icon">
+                            <i data-lucide="file-search" class="w-5 h-5 text-slate-500"></i>
+                        </div>
+                        <div class="flex-1 text-left">
+                            <p class="font-semibold">Đọc dữ liệu</p>
+                            <p class="text-xs text-slate-500">Trích xuất chỉ số từ BCTC</p>
+                        </div>
+                        <div class="loading-check hidden">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                    </div>
+
+                    <div id="step2" class="glass-card rounded-xl p-5 flex items-center gap-4 opacity-50 transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center step-icon">
+                            <i data-lucide="calculator" class="w-5 h-5 text-slate-500"></i>
+                        </div>
+                        <div class="flex-1 text-left">
+                            <p class="font-semibold">Tính toán</p>
+                            <p class="text-xs text-slate-500">So sánh với trung bình ngành</p>
+                        </div>
+                        <div class="loading-check hidden">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                    </div>
+
+                    <div id="step3" class="glass-card rounded-xl p-5 flex items-center gap-4 opacity-50 transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center step-icon">
+                            <i data-lucide="wand-2" class="w-5 h-5 text-slate-500"></i>
+                        </div>
+                        <div class="flex-1 text-left">
+                            <p class="font-semibold">AI diễn giải</p>
+                            <p class="text-xs text-slate-500">Tóm tắt key insights cho bạn</p>
+                        </div>
+                        <div class="loading-check hidden">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center gap-2 mt-8">
+                    <div class="loading-dot w-3 h-3 bg-emerald-400 rounded-full"></div>
+                    <div class="loading-dot w-3 h-3 bg-emerald-400 rounded-full"></div>
+                    <div class="loading-dot w-3 h-3 bg-emerald-400 rounded-full"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Screen -->
+        <section id="resultsScreen" class="hidden">
+            <div class="mb-6 flex items-center justify-between">
+                <button id="backBtn" class="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    <span class="text-sm font-medium">Phân tích mã khác</span>
+                </button>
+                <button id="proBtnResults" class="md:hidden flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-lg font-semibold text-xs">
+                    <i data-lucide="crown" class="w-3 h-3"></i>
+                    Nâng Pro
+                </button>
+            </div>
+
+            <!-- Header Info -->
+            <div class="glass-card rounded-2xl p-6 mb-6">
+                <div class="flex items-start justify-between flex-wrap gap-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <h2 class="text-2xl md:text-3xl font-bold" id="resultTicker">FPT Corporation</h2>
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold" id="resultQuarter">Q2/2024</span>
+                        </div>
+                        <p class="text-slate-400 text-sm">Ngành: Công nghệ thông tin | HOSE</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500 mb-1">Cập nhật</p>
+                        <p class="text-sm font-medium">29/09/2024</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Left: Score Circle -->
+                <div class="lg:col-span-1">
+                    <div class="glass-card rounded-2xl p-8 text-center sticky top-6">
+                        <h3 class="text-lg font-semibold mb-6 text-slate-300">FinSnap Score</h3>
+                        
+                        <!-- Circular Progress -->
+                        <div class="relative w-48 h-48 mx-auto mb-6">
+                            <svg class="w-full h-full" viewBox="0 0 200 200">
+                                <!-- Background Circle -->
+                                <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+                                <!-- Progress Circle -->
+                                <circle 
+                                    id="scoreCircle"
+                                    cx="100" cy="100" r="85" 
+                                    fill="none" 
+                                    stroke="url(#scoreGradient)" 
+                                    stroke-width="12"
+                                    stroke-linecap="round"
+                                    stroke-dasharray="534.07"
+                                    stroke-dashoffset="534.07"
+                                    class="score-ring"
+                                />
+                                <defs>
+                                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#10b981"/>
+                                        <stop offset="100%" stop-color="#06b6d4"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="scoreValue" class="text-6xl font-extrabold">0</span>
+                                <span class="text-sm text-slate-400 mt-1">/100</span>
+                            </div>
+                        </div>
+
+                        <div id="scoreBadge" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                        </div>
+                        <p class="text-xs text-slate-500">So với TB ngành: +15 điểm</p>
+                        
+                        <button id="shareBtn" class="w-full mt-6 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors">
+                            <i data-lucide="share-2" class="w-4 h-4"></i>
+                            Chia sẻ kết quả
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Metrics & AI -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Key Metrics Cards -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+                            3 Chỉ số then chốt
+                        </h3>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <!-- Metric 1 -->
+                            <div class="glass-card rounded-xl p-5 fade-in-up" style="animation-delay: 0.1s">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                                    </div>
+                                    <span class="flex items-center gap-1 text-emerald-400 text-sm font-semibold">
+                                        <i data-lucide="arrow-up" class="w-3 h-3"></i>
+                                        25.3%
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">Tăng trưởng doanh thu</p>
+                                <p class="text-2xl font-bold">+25.3%</p>
+                                <p class="text-xs text-slate-600 mt-2">YoY | Vượt TB ngành</p>
+                            </div>
+
+                            <!-- Metric 2 -->
+                            <div class="glass-card rounded-xl p-5 fade-in-up" style="animation-delay: 0.2s">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="percent" class="w-5 h-5 text-cyan-400"></i>
+                                    </div>
+                                    <span class="flex items-center gap-1 text-emerald-400 text-sm font-semibold">
+                                        <i data-lucide="arrow-up" class="w-3 h-3"></i>
+                                        18.7%
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">Biên lợi nhuận ròng</p>
+                                <p class="text-2xl font-bold">18.7%</p>
+                                <p class="text-xs text-slate-600 mt-2">Top 15% toàn ngành</p>
+                            </div>
+
+                            <!-- Metric 3 -->
+                            <div class="glass-card rounded-xl p-5 fade-in-up" style="animation-delay: 0.3s">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="wallet" class="w-5 h-5 text-amber-400"></i>
+                                    </div>
+                                    <span class="flex items-center gap-1 text-red-400 text-sm font-semibold">
+                                        <i data-lucide="arrow-down" class="w-3 h-3"></i>
+                                        0.42
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">Hệ số nợ/VCSH</p>
+                                <p class="text-2xl font-bold">0.42</p>
+                                <p class="text-xs text-slate-600 mt-2">An toàn | < 1.0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Explanation -->
+                    <div class="glass-card rounded-2xl p-6 fade-in-up" style="animation-delay: 0.4s">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                                <i data-lucide="sparkles" class="w-5 h-5 text-slate-900"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold">AI diễn giải cho bạn</h3>
+                                <p class="text-xs text-slate-500">Nói tiếng người, không thuật ngữ</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-xl p-5 border border-slate-800">
+                            <p class="text-slate-300 leading-relaxed">
+                                <span class="text-emerald-400 font-semibold">Ok, FPT đang "căng đét" luôn nha 🔥</span><br><br>
+                                Q2 này doanh thu tăng 25% so với năm ngoái, chủ yếu nhờ mảng xuất khẩu phần mềm với công nghệ. Biên lãi 18.7% là thuộc top đầu ngành rồi - chứng tỏ công ty kiếm tiền rất hiệu quả.<br><br>
+                                Nợ thì cực ít, chỉ 0.42 lần vốn chủ, nên ngủ ngon không lo vỡ nợ 😴 Tiền mặt dồi dào, tha hồ đầu tư mở rộng.<br><br>
+                                <span class="text-cyan-400 font-semibold">Tóm lại:</span> Đây là một doanh nghiệp tăng trưởng khoẻ, lợi nhuận tốt, tài chính lành mạnh. Phù hợp để hold dài hạn nếu bạn tin vào câu chuyện công nghệ VN 🚀
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Red Flag Warning -->
+                    <div class="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 fade-in-up" style="animation-delay: 0.5s">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-red-400 mb-2">⚠️ Red Flag cần lưu ý</h3>
+                                <p class="text-slate-300 text-sm leading-relaxed">
+                                    <span class="font-semibold">Khoản phải thu tăng mạnh 32% QoQ</span> - cao hơn tốc độ tăng doanh thu. Có thể có rủi ro công nợ khó đòi hoặc chính sách bán chịu nới lỏng. Nên theo dõi thêm 1-2 quý tới để xác nhận xu hướng.
+                                </p>
+                                <button id="proBtnRedFlag" class="mt-4 text-xs text-red-400 hover:text-red-300 font-medium flex items-center gap-1">
+                                    <i data-lucide="lock" class="w-3 h-3"></i>
+                                    Xem phân tích chi tiết với FinSnap Pro
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pro CTA -->
+                    <div class="glass-card rounded-2xl p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="crown" class="w-6 h-6 text-slate-900"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold mb-2">Mở khoá FinSnap Pro</h3>
+                                <ul class="space-y-2 text-sm text-slate-300 mb-4">
+                                    <li class="flex items-center gap-2">
+                                        <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                        Phân tích không giới hạn mã CP
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                        So sánh 5 năm lịch sử + dự phóng
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+                                        Cảnh báo sớm Red Flag qua email
+                                    </li>
+                                </ul>
+                                <button id="proBtnMain" class="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 rounded-xl font-bold hover:shadow-xl hover:shadow-orange-500/30 transition-all">
+                                    Dùng thử 7 ngày miễn phí
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-16 md:mt-24 pb-8">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-lg flex items-center justify-center">
+                            <i data-lucide="zap" class="w-4 h-4 text-slate-900"></i>
+                        </div>
+                        <span class="font-bold">FinSnap</span>
+                        <span class="text-slate-600">|</span>
+                        <span class="text-xs text-slate-500">AI Financial Analyzer</span>
+                    </div>
+                    <p class="text-xs text-slate-500 text-center md:text-right max-w-md">
+                        ⚠️ <span class="font-semibold">Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.</span> 
+                        Luôn DYOR và tham khảo ý kiến chuyên gia trước khi ra quyết định.
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Pro Modal -->
+    <div id="proModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-md w-full p-8 relative">
+            <button id="closeModal" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="crown" class="w-8 h-8 text-slate-900"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-2">FinSnap Pro</h3>
+                <p class="text-slate-400 text-sm">Công cụ phân tích chuyên sâu cho nhà đầu tư nghiêm túc</p>
+            </div>
+
+            <div class="space-y-3 mb-6">
+                <div class="flex items-start gap-3">
+                    <i data-lucide="infinity" class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-sm">Phân tích không giới hạn</p>
+                        <p class="text-xs text-slate-500">Scan tất cả mã CP, PDF không giới hạn</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-sm">Dữ liệu 5 năm + dự phóng</p>
+                        <p class="text-xs text-slate-500">So sánh lịch sử & AI dự báo xu hướng</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i data-lucide="bell" class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-sm">Cảnh báo Red Flag realtime</p>
+                        <p class="text-xs text-slate-500">Email/SMS khi phát hiện rủi ro mới</p>
+                    </div>
+                <div class="flex items-start gap-3">
+                    <i data-lucide="file-text" class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-sm">Xuất báo cáo PDF chuyên nghiệp</p>
+                        <p class="text-xs text-slate-500">White-label cho khách hàng/tư vấn</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/50 rounded-xl p-4 mb-6 text-center">
+                <p class="text-xs text-slate-500 mb-1">Chỉ từ</p>
+                <p class="text-3xl font-extrabold">199K<span class="text-base text-slate-400 font-medium">/tháng</span></p>
+                <p class="text-xs text-emerald-400 mt-1">🎁 Miễn phí 7 ngày đầu</p>
+            </div>
+
+            <button class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-bold py-4 rounded-xl hover:shadow-xl hover:shadow-orange-500/30 transition-all mb-3">
+                Bắt đầu dùng thử miễn phí
+            </button>
+            <p class="text-xs text-slate-600 text-center">Huỷ bất cứ lúc nào. Không cần thẻ tín dụng.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Mock data for FPT Q2/2024
+        const mockData = {
+            FPT: {
+                name: "FPT Corporation",
+                quarter: "Q2/2024",
+                score: 86,
+                grade: "Xuất sắc",
+                gradeColor: "bg-emerald-500/20 text-emerald-400",
+                metrics: {
+                    revenueGrowth: 25.3,
+                    profitMargin: 18.7,
+                    debtRatio: 0.42
+                },
+                hasRedFlag: true
+            },
+            HPG: {
+                name: "Hòa Phát Group",
+                quarter: "Q2/2024", 
+                score: 72,
+                grade: "Khá tốt",
+                gradeColor: "bg-cyan-500/20 text-cyan-400",
+                metrics: {
+                    revenueGrowth: 12.1,
+                    profitMargin: 9.3,
+                    debtRatio: 0.68
+                },
+                hasRedFlag: false
+            }
+        };
+
+        // DOM Elements
+        const landingScreen = document.getElementById('landingScreen');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const tickerInput = document.getElementById('tickerInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const backBtn = document.getElementById('backBtn');
+        const pdfUpload = document.getElementById('pdfUpload');
+        const proModal = document.getElementById('proModal');
+        const closeModal = document.getElementById('closeModal');
+        const loadingTicker = document.getElementById('loadingTicker');
+
+        // Quick ticker buttons
+        document.querySelectorAll('.quick-ticker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                tickerInput.value = btn.textContent;
+                tickerInput.focus();
+            });
+        });
+
+        // Enable/disable analyze button
+        tickerInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+            analyzeBtn.disabled = !e.target.value.trim() && !pdfUpload.files.length;
+        });
+
+        pdfUpload.addEventListener('change', () => {
+            analyzeBtn.disabled = !pdfUpload.files.length && !tickerInput.value.trim();
+        });
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', () => {
+            const ticker = tickerInput.value.trim() || 'FPT';
+            startAnalysis(ticker);
+        });
+
+        // Enter key on input
+        tickerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && tickerInput.value.trim()) {
+                startAnalysis(tickerInput.value.trim());
+            }
+        });
+
+        // Main analysis flow
+        function startAnalysis(ticker) {
+            const displayTicker = ticker.toUpperCase();
+            loadingTicker.textContent = `Mã: ${displayTicker} - Q2/2024`;
+            
+            // Show loading screen
+            landingScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            
+            // Reset loading steps
+            ['step1', 'step2', 'step3'].forEach(id => {
+                const step = document.getElementById(id);
+                step.classList.add('opacity-50');
+                step.querySelector('.step-icon').classList.remove('bg-emerald-500/20');
+                step.querySelector('.loading-check').classList.add('hidden');
+            });
+
+            // Animate steps
+            setTimeout(() => animateStep('step1'), 500);
+            setTimeout(() => animateStep('step2'), 1800);
+            setTimeout(() => animateStep('step3'), 3000);
+            setTimeout(() => showResults(displayTicker), 4200);
+        }
+
+        function animateStep(stepId) {
+            const step = document.getElementById(stepId);
+            step.classList.remove('opacity-50');
+            step.classList.add('opacity-100');
+            step.querySelector('.step-icon').classList.add('bg-emerald-500/20');
+            step.querySelector('.step-icon i').classList.remove('text-slate-500');
+            step.querySelector('.step-icon i').classList.add('text-emerald-400');
+            
+            setTimeout(() => {
+                step.querySelector('.loading-check').classList.remove('hidden');
+            }, 600);
+        }
+
+        function showResults(ticker) {
+            loadingScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Get data (default to FPT if not found)
+            const data = mockData[ticker] || mockData.FPT;
+            
+            // Update UI
+            document.getElementById('resultTicker').textContent = data.name;
+            document.getElementById('resultQuarter').textContent = data.quarter;
+            
+            // Animate score circle
+            const scoreCircle = document.getElementById('scoreCircle');
+            const scoreValue = document.getElementById('scoreValue');
+            const scoreBadge = document.getElementById('scoreBadge');
+            
+            const circumference = 2 * Math.PI * 85;
+            const offset = circumference - (data.score / 100) * circumference;
+            
+            setTimeout(() => {
+                scoreCircle.style.strokeDashoffset = offset;
+            }, 300);
+
+            // Animate score number
+            let currentScore = 0;
+            const scoreInterval = setInterval(() => {
+                currentScore += 2;
+                if (currentScore >= data.score) {
+                    currentScore = data.score;
+                    clearInterval(scoreInterval);
+                }
+                scoreValue.textContent = currentScore;
+            }, 20);
+
+            // Update badge
+            scoreBadge.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 ${data.gradeColor}`;
+            scoreBadge.innerHTML = `<i data-lucide="award" class="w-4 h-4"></i>${data.grade}`;
+            lucide.createIcons();
+
+            // Hide red flag if not applicable
+            if (!data.hasRedFlag) {
+                document.querySelector('.bg-red-500\\/10').classList.add('hidden');
+            } else {
+                document.querySelector('.bg-red-500\\/10').classList.remove('hidden');
+            }
+        }
+
+        // Back button
+        backBtn.addEventListener('click', () => {
+            resultsScreen.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            landingScreen.classList.remove('hidden');
+            tickerInput.value = '';
+            pdfUpload.value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Pro modal triggers
+        const proButtons = [
+            'proBtnHeader', 'proBtnResults', 'proBtnMain', 
+            'proBtnRedFlag', 'shareBtn'
+        ];
+        
+        proButtons.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    proModal.classList.remove('hidden');
+                });
+            }
+        });
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            proModal.classList.add('hidden');
+        });
+
+        proModal.addEventListener('click', (e) => {
+            if (e.target === proModal) {
+                proModal.classList.add('hidden');
+            }
+        });
+
+        // Share button
+        document.getElementById('shareBtn').addEventListener('click', () => {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'FinSnap - Phân tích FPT Q2/2024',
+                    text: 'Check kết quả phân tích BCTC FPT trên FinSnap - Score 86/100 🔥',
+                    url: window.location.href
+                });
+            } else {
+                proModal.classList.remove('hidden');
+            }
+        });
+
+        // Initial state
+        analyzeBtn.disabled = true;
+    </script>
+</body>
+</html>
