@@ -15,7 +15,6 @@ app.add_middleware(
 )
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL = "openrouter/free"
 
 class FinancialData(BaseModel):
     ticker: str
@@ -28,37 +27,23 @@ class FinancialData(BaseModel):
     flags: List[str]
     score: int
 
-SYSTEM_PROMPT = """Bạn là chuyên gia tài chính nhưng giải thích cho người mới chơi chứng khoán F0-F2.
-QUY TẮC: 1. CHỈ dùng số liệu được cung cấp. Cấm bịa. 2. Giọng GenZ, dễ hiểu. 3. Nếu có flags thì PHẢI nhắc rủi ro. 4. CẤM từ: mua, bán, khuyến nghị, nên đầu tư. 5. Luôn kết: "Cần theo dõi thêm báo cáo quý tới." 6. Output 2-3 câu."""
-
-def build_user_prompt(d: FinancialData) -> str:
-    return f"""Mã: {d.ticker} {d.quarter}
-Doanh thu: {d.revenue}, Lợi nhuận: {d.net_profit}
-Nợ/Tài sản: {d.debt_ratio:.2f}, Dòng tiền HĐKD: {d.ocf} tỷ, ROE: {d.roe:.1f}%
-Điểm: {d.score}/100, Cờ: {', '.join(d.flags) if d.flags else 'Không'}"""
-
 @app.post("/explain")
 async def explain(data: FinancialData):
+    if not OPENROUTER_API_KEY:
+        return {"explanation": "Lỗi: Chưa cấu hình OPENROUTER_API_KEY"}
+
     headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
     payload = {
-        "model": MODEL,
+        "model": "openrouter/free",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(data)}
+            {"role": "system", "content": "Bạn là chuyên gia tài chính GenZ. Tóm tắt 2-3 câu, không khuyến nghị đầu tư."},
+            {"role": "user", "content": f"Mã {data.ticker} {data.quarter}. Điểm {data.score}/100. Flags: {data.flags}"}
         ],
         "temperature": 0.3, "max_tokens": 150
     }
     async with httpx.AsyncClient() as client:
         r = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=20)
-    content = r.json()["choices"][0]["message"]["content"]
-    if any(w in content.lower() for w in ["mua", "bán", "khuyến nghị"]):
-        content = "Công ty có điểm tốt và điểm cần lưu ý theo dữ liệu. Cần theo dõi thêm báo cáo quý tới."
-    return {"explanation": content.strip()}
+    return {"explanation": r.json()["choices"][0]["message"]["content"].strip()}
 
 @app.get("/")
 def health(): return {"status": "FinSnap AI OK"}
-
-# Thêm route này để xử lý preflight
-@app.options("/{rest_of_path:path}")
-async def preflight_handler():
-    return {"status": "ok"}
