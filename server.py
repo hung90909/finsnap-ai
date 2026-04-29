@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL = "openai/gpt-4o-mini"
+MODEL ='openrouter/free'
 
 class FinancialData(BaseModel):
     ticker: str
