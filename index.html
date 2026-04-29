@@ -6,6 +6,10 @@
 <title>FinSnap - AI Phân Tích Báo Cáo Tài Chính</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
 <style>
     body { font-family: 'Inter', sans-serif; }
@@ -526,23 +530,9 @@
     </div>
 
       <script>
- lucide.createIcons();
+lucide.createIcons();
 
-// ⚠️ THAY LINK RAILWAY CỦA BẠN VÀO ĐÂY - NHỚ CÓ https://
-const API_URL = 'https://finsnap-ai.vanhung282003.workers.dev/';
-
-// Data mẫu FPT - sau này bạn thay bằng data thật từ PDF/Rule Engine
-const MOCK_FINANCIAL_DATA = {
-    ticker: "FPT",
-    quarter: "Q2/2024",
-    revenue: [13000, 14500, 15200],
-    net_profit: [1200, 1450, 1610],
-    debt_ratio: 0.42,
-    ocf: -200,
-    roe: 23.5,
-    flags: ["Dòng tiền kinh doanh âm", "Nợ vay tăng 30%"],
-    score: 72
-};
+const API_URL = 'https://finsnap-ai.vanhung282003.workers.dev/'; // THAY LINK WORKER CỦA BẠN
 
 // Elements
 const landingScreen = document.getElementById('landingScreen');
@@ -550,68 +540,175 @@ const loadingScreen = document.getElementById('loadingScreen');
 const resultsScreen = document.getElementById('resultsScreen');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const tickerInput = document.getElementById('tickerInput');
+const pdfUpload = document.getElementById('pdfUpload');
 const backBtn = document.getElementById('backBtn');
 
-// Gắn sự kiện cho nút Phân tích
+let extractedData = null; // Lưu data đọc từ PDF
+
+// Gắn sự kiện
 analyzeBtn.addEventListener('click', () => {
-    const ticker = tickerInput.value.trim().toUpperCase() || 'FPT';
+    const ticker = tickerInput.value.trim().toUpperCase();
+    if (!ticker &&!extractedData) {
+        alert('Nhập mã CP hoặc upload PDF đã bạn ơi');
+        return;
+    }
     runAnalysis(ticker);
 });
 
-// Gắn sự kiện cho nút Back
 backBtn.addEventListener('click', () => {
     resultsScreen.classList.add('hidden');
     landingScreen.classList.remove('hidden');
     tickerInput.value = '';
+    pdfUpload.value = '';
+    extractedData = null;
 });
 
-// Gắn sự kiện cho quick ticker
 document.querySelectorAll('.quick-ticker').forEach(btn => {
     btn.addEventListener('click', () => {
         tickerInput.value = btn.innerText;
     });
 });
 
-// Gắn sự kiện cho nút Pro
-document.querySelectorAll('#proBtnHeader, #proBtnResults, #proBtnMain, #proBtnRedFlag').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.getElementById('proModal').classList.remove('hidden');
-    });
-});
+// ĐỌC PDF KHI USER UPLOAD
+pdfUpload.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-document.getElementById('closeModal').addEventListener('click', () => {
-    document.getElementById('proModal').classList.add('hidden');
-});
-
-// Hàm chạy phân tích
-async function runAnalysis(ticker) {
-    // 1. Chuyển sang màn loading
+    // Hiện loading
     landingScreen.classList.add('hidden');
-    resultsScreen.classList.add('hidden');
     loadingScreen.classList.remove('hidden');
-    document.getElementById('loadingTicker').innerText = `Mã: ${ticker} - Q2/2024`;
-    
-    // Fake loading steps cho đẹp
+    document.getElementById('loadingTicker').innerText = `Đang đọc file: ${file.name}`;
     animateLoadingSteps();
 
     try {
-        // 2. Gọi API thật - Dùng data mock, sau này bạn thay MOCK_FINANCIAL_DATA bằng data thật
-        const requestData = {...MOCK_FINANCIAL_DATA, ticker: ticker};
-        
+        const data = await extractDataFromPDF(file);
+        extractedData = data;
+
+        // Auto fill ticker nếu tìm thấy
+        if (data.ticker) tickerInput.value = data.ticker;
+
+        // Chạy phân tích luôn
+        runAnalysis(data.ticker || 'UNKNOWN');
+    } catch (error) {
+        alert('Đọc PDF lỗi: ' + error.message);
+        loadingScreen.classList.add('hidden');
+        landingScreen.classList.remove('hidden');
+    }
+});
+
+// HÀM ĐỌC PDF - CORE ĐÂY
+async function extractDataFromPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let fullText = '';
+
+    // Đọc 10 trang đầu thôi cho nhanh
+    const maxPages = Math.min(pdf.numPages, 10);
+    for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+    }
+
+    // REGEX TÌM SỐ LIỆU - Tùy form BCTC mà sửa
+    const data = {
+        ticker: extractTicker(fullText),
+        quarter: extractQuarter(fullText),
+        revenue: extractNumber(fullText, /Doanh thu.*?(?:thuần|bán hàng).*?([\d,\.]+)/i),
+        net_profit: extractNumber(fullText, /Lợi nhuận sau thuế.*?([\d,\.]+)/i),
+        debt_ratio: extractRatio(fullText, /Nợ phải trả.*?Vốn chủ.*?([\d,\.]+)/i),
+        ocf: extractNumber(fullText, /Lưu chuyển tiền.*?hoạt động.*?([\d,\.\-]+)/i),
+        roe: 0, // Tính sau
+        flags: [],
+        score: 0 // Tính sau
+    };
+
+    // Validate
+    if (!data.revenue ||!data.net_profit) {
+        throw new Error('Không tìm thấy Doanh thu hoặc Lợi nhuận trong PDF. File BCTC chuẩn không bạn?');
+    }
+
+    // Tính ROE đơn giản = LN / VCSH * 100
+    const equity = extractNumber(fullText, /Vốn chủ sở hữu.*?([\d,\.]+)/i);
+    if (equity) data.roe = (data.net_profit / equity * 100).toFixed(1);
+
+    // Tính Score đơn giản
+    data.score = calculateScore(data);
+
+    // Check Red Flag
+    if (data.ocf < 0) data.flags.push('Dòng tiền kinh doanh âm');
+    if (data.debt_ratio > 1) data.flags.push('Nợ vay cao');
+
+    return data;
+}
+
+// HÀM HỖ TRỢ TÌM SỐ
+function extractTicker(text) {
+    const match = text.match(/Mã chứng khoán[:\s]*([A-Z]{3})/i);
+    return match? match[1] : null;
+}
+
+function extractQuarter(text) {
+    const match = text.match(/(Quý|Q)\s*([1-4]).*?(\d{4})/i);
+    return match? `Q${match[2]}/${match[3]}` : 'Q2/2024';
+}
+
+function extractNumber(text, regex) {
+    const match = text.match(regex);
+    if (!match) return 0;
+    // Xóa dấu, và. rồi parse
+    const numStr = match[1].replace(/[,\.]/g, '');
+    return parseInt(numStr) || 0;
+}
+
+function extractRatio(text, regex) {
+    const match = text.match(regex);
+    return match? parseFloat(match[1].replace(',', '.')) : 0.5;
+}
+
+function calculateScore(data) {
+    let score = 50;
+    if (data.net_profit > 0) score += 20;
+    if (data.ocf > 0) score += 15;
+    if (data.debt_ratio < 1) score += 15;
+    return Math.min(score, 100);
+}
+
+// CHẠY PHÂN TÍCH
+async function runAnalysis(ticker) {
+    landingScreen.classList.add('hidden');
+    resultsScreen.classList.add('hidden');
+    loadingScreen.classList.remove('hidden');
+    document.getElementById('loadingTicker').innerText = `Mã: ${ticker}`;
+
+    animateLoadingSteps();
+
+    try {
+        // Dùng data từ PDF nếu có, không thì dùng mock
+        const financialData = extractedData || {
+            ticker: ticker,
+            quarter: "Q2/2024",
+            revenue: [13000, 14500, 15200],
+            net_profit: [1200, 1450, 1610],
+            debt_ratio: 0.42,
+            ocf: -200,
+            roe: 23.5,
+            flags: ["Dòng tiền kinh doanh âm"],
+            score: 72
+        };
+
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(requestData)
+            body: JSON.stringify(financialData)
         });
 
         if (!response.ok) throw new Error(`API lỗi: ${response.status}`);
-        
+
         const data = await response.json();
-        
-        // 3. Đổ data ra UI
-        updateResultsUI(requestData, data.explanation);
-        
-        // 4. Chuyển sang màn kết quả
+        updateResultsUI(financialData, data.explanation);
+
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
             resultsScreen.classList.remove('hidden');
@@ -619,13 +716,12 @@ async function runAnalysis(ticker) {
 
     } catch (error) {
         console.error('Lỗi API:', error);
-        alert('Không kết nối được AI. Check lại link Railway hoặc F12 xem lỗi CORS.');
+        alert('Không kết nối được AI. Check F12 xem lỗi gì.');
         loadingScreen.classList.add('hidden');
         landingScreen.classList.remove('hidden');
     }
 }
 
-// Fake animation loading
 function animateLoadingSteps() {
     const steps = ['step1', 'step2', 'step3'];
     steps.forEach((stepId, index) => {
@@ -640,23 +736,19 @@ function animateLoadingSteps() {
     });
 }
 
-// Update UI với kết quả
 function updateResultsUI(finData, aiText) {
-    // 1. Update ticker info
     document.getElementById('resultTicker').innerText = `${finData.ticker} Corporation`;
     document.getElementById('resultQuarter').innerText = finData.quarter;
-    
-    // 2. Update Score
+
     const score = finData.score;
     const scoreCircle = document.getElementById('scoreCircle');
     const scoreValue = document.getElementById('scoreValue');
     const scoreBadge = document.getElementById('scoreBadge');
-    
+
     scoreValue.innerText = score;
     const offset = 534.07 - (534.07 * score / 100);
     scoreCircle.style.strokeDashoffset = offset;
-    
-    // Update badge
+
     if (score >= 70) {
         scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-500/20 text-emerald-400';
         scoreBadge.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i> Khỏe mạnh';
@@ -667,13 +759,20 @@ function updateResultsUI(finData, aiText) {
         scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-red-500/20 text-red-400';
         scoreBadge.innerHTML = '<i data-lucide="shield-x" class="w-4 h-4"></i> Rủi ro';
     }
-    
-    // 3. Update AI Text
+
     document.getElementById('aiExplanationText').innerText = aiText;
-    
-    // Re-render icons
     lucide.createIcons();
 }
+
+// Nút Pro
+document.querySelectorAll('#proBtnHeader, #proBtnResults, #proBtnMain, #proBtnRedFlag').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('proModal').classList.remove('hidden');
+    });
+});
+document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('proModal').classList.add('hidden');
+});
 </script>
 </body>
 </html>
