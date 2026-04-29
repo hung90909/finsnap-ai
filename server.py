@@ -5,7 +5,15 @@ from pydantic import BaseModel
 from typing import List
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# ⚠️ QUAN TRỌNG: Phải có đoạn này để cho phép Github gọi
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Cho phép tất cả domain gọi
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL = "openai/gpt-4o-mini"
