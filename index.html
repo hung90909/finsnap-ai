@@ -611,6 +611,16 @@ async function extractDataFromPDF(file) {
         fullText += pageText + '\n';
     }
 
+    for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map(item => item.str).join(' ');
+    fullText += pageText + '\n';
+}
+
+console.log('=== TEXT PDF ĐỌC ĐƯỢC ===');
+console.log(fullText); // THÊM DÒNG NÀY
+
     // REGEX TÌM SỐ LIỆU - Tùy form BCTC mà sửa
     const data = {
           ticker: extractTicker(fullText),
