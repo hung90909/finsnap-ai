@@ -6,6 +6,7 @@
 <title>FinSnap - AI Phân Tích Báo Cáo Tài Chính</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -267,38 +268,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function extractDataFromPDF(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-        let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 10);
-        for (let i = 1; i <= maxPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-        }
-        console.log('=== TEXT PDF ===', fullText);
-
-        const data = {
-            ticker: extractTicker(fullText),
-            quarter: extractQuarter(fullText),
-            revenue: extractNumber(fullText, ['doanh', 'thu']),
-            net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
-            debt_ratio: 0.5,
-            ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền']),
-            roe: 0,
-            flags: [],
-            score: 0
-        };
-
-        if (!data.revenue ||!data.net_profit) {
-            throw new Error('Không tìm thấy Doanh thu hoặc Lợi nhuận. Check Console xem text PDF');
-        }
-
-        data.score = calculateScore(data);
-        if (data.ocf < 0) data.flags.push('Dòng tiền âm');
-        return data;
+async function extractDataFromPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let fullText = '';
+    
+    // Đọc 5 trang đầu thôi
+    const maxPages = Math.min(pdf.numPages, 5);
+    for (let i = 1; i <= maxPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
     }
+    
+    console.log('=== TEXT PDF ===', fullText);
+    
+    // NẾU TEXT RỖNG → DÙNG OCR ĐỌC ẢNH
+    if (fullText.trim().length < 50) {
+        console.log('PDF không có text, chuyển sang OCR...');
+        document.getElementById('loadingTicker').innerText = `Đang OCR ảnh PDF... lâu hơn xíu`;
+        
+        fullText = '';
+        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({scale: 2.0}); // Scale to cho OCR chính xác
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({canvasContext: context, viewport: viewport}).promise;
+            
+            // OCR tiếng Việt + Anh
+            const { data: { text } } = await Tesseract.recognize(canvas, 'vie+eng');
+            fullText += text + '\n';
+            console.log(`OCR Trang ${i}:`, text);
+        }
+    }
+    
+    if (fullText.trim().length < 50) {
+        throw new Error('Không đọc được chữ từ PDF. File lỗi hoặc chất lượng quá kém.');
+    }
+
+    const data = {
+        ticker: extractTicker(fullText),
+        quarter: extractQuarter(fullText),
+        revenue: extractNumber(fullText, ['doanh', 'thu']),
+        net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
+        debt_ratio: 0.5,
+        ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền']),
+        roe: 0,
+        flags: [],
+        score: 0
+    };
+
+    if (!data.revenue ||!data.net_profit) {
+        throw new Error('OCR xong vẫn không tìm thấy Doanh thu hoặc Lợi nhuận. Check Console xem text OCR ra gì');
+    }
+
+    data.score = calculateScore(data);
+    if (data.ocf < 0) data.flags.push('Dòng tiền âm');
+    return data;
+}
 
     function extractTicker(text) {
         const match = text.match(/Mã CK[:\s]*([A-Z]{3})/i);
