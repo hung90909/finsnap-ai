@@ -6,11 +6,6 @@
 <title>FinSnap - AI Phân Tích Báo Cáo Tài Chính</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
 <style>
     body { font-family: 'Inter', sans-serif; }
@@ -50,7 +45,7 @@
                     <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">như dân chuyên trong 30s</span>
                 </h2>
                 <p class="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">
-                    Nhập mã cổ phiếu hoặc upload PDF BCTC. AI sẽ scan & tóm tắt chỉ số quan trọng nhất cho bạn.
+                    Nhập mã cổ phiếu. AI tự động lấy BCTC mới nhất & tóm tắt chỉ số quan trọng cho bạn.
                 </p>
             </div>
 
@@ -68,21 +63,8 @@
                             <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">FPT</button>
                             <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">HPG</button>
                             <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">VNM</button>
+                            <button class="quick-ticker px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors">VCB</button>
                         </div>
-                    </div>
-
-                    <div class="relative">
-                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
-                        <div class="relative flex justify-center text-xs"><span class="bg-slate-900 px-3 text-slate-500">hoặc</span></div>
-                    </div>
-
-                    <div>
-                        <label for="pdfUpload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 hover:bg-slate-900/30 transition-all group">
-                            <i data-lucide="file-up" class="w-8 h-8 text-slate-500 group-hover:text-emerald-400 mb-2"></i>
-                            <p class="text-sm text-slate-400 group-hover:text-slate-300"><span class="font-semibold">Tải lên PDF BCTC</span></p>
-                            <p class="text-xs text-slate-600 mt-1">Quý 2/2024, cả năm 2023,...</p>
-                            <input id="pdfUpload" type="file" class="hidden" accept=".pdf">
-                        </label>
                     </div>
 
                     <button id="analyzeBtn" class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-900 font-bold py-4 rounded-xl hover:shadow-xl hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2">
@@ -100,16 +82,16 @@
                     <i data-lucide="cpu" class="w-10 h-10 text-slate-900 animate-pulse"></i>
                 </div>
                 <h2 class="text-2xl md:text-3xl font-bold mb-2">AI đang phân tích...</h2>
-                <p class="text-slate-400 mb-12" id="loadingTicker">Mã: FPT - Q2/2024</p>
+                <p class="text-slate-400 mb-12" id="loadingTicker">Mã: FPT</p>
 
                 <div class="space-y-6 max-w-md mx-auto">
                     <div id="step1" class="glass-card rounded-xl p-5 flex items-center gap-4 opacity-50 transition-all">
                         <div class="step-icon w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center">
-                            <i data-lucide="file-search" class="w-5 h-5 text-slate-500"></i>
+                            <i data-lucide="database" class="w-5 h-5 text-slate-500"></i>
                         </div>
                         <div class="flex-1 text-left">
-                            <p class="font-semibold">Đọc dữ liệu</p>
-                            <p class="text-xs text-slate-500">Trích xuất chỉ số từ BCTC</p>
+                            <p class="font-semibold">Lấy dữ liệu BCTC</p>
+                            <p class="text-xs text-slate-500">Từ Cafef/Vietstock</p>
                         </div>
                         <div class="loading-check hidden"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i></div>
                     </div>
@@ -119,8 +101,8 @@
                             <i data-lucide="calculator" class="w-5 h-5 text-slate-500"></i>
                         </div>
                         <div class="flex-1 text-left">
-                            <p class="font-semibold">Tính toán</p>
-                            <p class="text-xs text-slate-500">So sánh với trung bình ngành</p>
+                            <p class="font-semibold">Tính toán chỉ số</p>
+                            <p class="text-xs text-slate-500">ROE, Nợ/VCSH, Score</p>
                         </div>
                         <div class="loading-check hidden"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i></div>
                     </div>
@@ -131,7 +113,7 @@
                         </div>
                         <div class="flex-1 text-left">
                             <p class="font-semibold">AI diễn giải</p>
-                            <p class="text-xs text-slate-500">Tóm tắt key insights cho bạn</p>
+                            <p class="text-xs text-slate-500">Tóm tắt key insights GenZ</p>
                         </div>
                         <div class="loading-check hidden"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i></div>
                     </div>
@@ -161,7 +143,7 @@
                             <h2 class="text-2xl md:text-3xl font-bold" id="resultTicker">FPT Corporation</h2>
                             <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold" id="resultQuarter">Q2/2024</span>
                         </div>
-                        <p class="text-slate-400 text-sm">Ngành: Công nghệ thông tin | HOSE</p>
+                        <p class="text-slate-400 text-sm" id="resultIndustry">Ngành: Công nghệ thông tin | HOSE</p>
                     </div>
                 </div>
             </div>
@@ -191,7 +173,53 @@
                 </div>
 
                 <div class="lg:col-span-2 space-y-6">
-                    <div class="glass-card rounded-2xl p-6 fade-in-up">
+                    <!-- Key Metrics -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+                            3 Chỉ số then chốt
+                        </h3>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div class="glass-card rounded-xl p-5 fade-in-up">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+                                    </div>
+                                    <span id="revenueGrowth" class="flex items-center gap-1 text-emerald-400 text-sm font-semibold"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">Tăng trưởng doanh thu</p>
+                                <p id="revenueValue" class="text-2xl font-bold"></p>
+                                <p class="text-xs text-slate-600 mt-2">YoY</p>
+                            </div>
+
+                            <div class="glass-card rounded-xl p-5 fade-in-up" style="animation-delay: 0.1s">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="percent" class="w-5 h-5 text-cyan-400"></i>
+                                    </div>
+                                    <span id="roeChange" class="flex items-center gap-1 text-emerald-400 text-sm font-semibold"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">ROE</p>
+                                <p id="roeValue" class="text-2xl font-bold"></p>
+                                <p class="text-xs text-slate-600 mt-2">Hiệu quả vốn</p>
+                            </div>
+
+                            <div class="glass-card rounded-xl p-5 fade-in-up" style="animation-delay: 0.2s">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="wallet" class="w-5 h-5 text-amber-400"></i>
+                                    </div>
+                                    <span id="debtStatus" class="flex items-center gap-1 text-emerald-400 text-sm font-semibold"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-1">Hệ số nợ/VCSH</p>
+                                <p id="debtValue" class="text-2xl font-bold"></p>
+                                <p class="text-xs text-slate-600 mt-2">An toàn tài chính</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Explanation -->
+                    <div class="glass-card rounded-2xl p-6 fade-in-up" style="animation-delay: 0.3s">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
                                 <i data-lucide="sparkles" class="w-5 h-5 text-slate-900"></i>
@@ -202,6 +230,19 @@
                             </div>
                         <div class="bg-slate-900/50 rounded-xl p-5 border border-slate-800">
                             <p id="aiExplanationText" class="text-slate-300 leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <!-- Red Flags -->
+                    <div id="redFlagBox" class="hidden bg-red-500/10 border border-red-500/30 rounded-2xl p-6 fade-in-up" style="animation-delay: 0.4s">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-red-400 mb-2">⚠️ Red Flag cần lưu ý</h3>
+                                <p id="redFlagText" class="text-slate-300 text-sm leading-relaxed"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -220,144 +261,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsScreen = document.getElementById('resultsScreen');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const tickerInput = document.getElementById('tickerInput');
-    const pdfUpload = document.getElementById('pdfUpload');
     const backBtn = document.getElementById('backBtn');
-
-    let extractedData = null;
 
     analyzeBtn.addEventListener('click', () => {
         const ticker = tickerInput.value.trim().toUpperCase();
-        if (!ticker &&!extractedData) {
-            alert('Nhập mã CP hoặc upload PDF đã bạn ơi');
-            return;
-        }
-        runAnalysis(ticker || extractedData?.ticker);
+        if (!ticker) return alert('Nhập mã CP đi bạn ơi');
+        if (ticker.length !== 3) return alert('Mã CP phải 3 ký tự nha');
+        runAnalysis(ticker);
     });
 
     backBtn.addEventListener('click', () => {
         resultsScreen.classList.add('hidden');
         landingScreen.classList.remove('hidden');
         tickerInput.value = '';
-        pdfUpload.value = '';
-        extractedData = null;
     });
 
     document.querySelectorAll('.quick-ticker').forEach(btn => {
-        btn.addEventListener('click', () => tickerInput.value = btn.innerText);
+        btn.addEventListener('click', () => {
+            tickerInput.value = btn.innerText;
+            runAnalysis(btn.innerText);
+        });
     });
 
-    pdfUpload.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        landingScreen.classList.add('hidden');
-        loadingScreen.classList.remove('hidden');
-        document.getElementById('loadingTicker').innerText = `Đang đọc: ${file.name}`;
-        resetSteps();
-        animateLoadingSteps();
-
-        try {
-            const data = await extractDataFromPDF(file);
-            extractedData = data;
-            if (data.ticker) tickerInput.value = data.ticker;
-            runAnalysis(data.ticker || 'UNKNOWN');
-        } catch (error) {
-            alert('Đọc PDF lỗi: ' + error.message);
-            loadingScreen.classList.add('hidden');
-            landingScreen.classList.remove('hidden');
-        }
+    tickerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') analyzeBtn.click();
     });
-
-async function extractDataFromPDF(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    let fullText = '';
-    
-    // Đọc 5 trang đầu thôi
-    const maxPages = Math.min(pdf.numPages, 5);
-    for (let i = 1; i <= maxPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
-    }
-    
-    console.log('=== TEXT PDF ===', fullText);
-    
-    // NẾU TEXT RỖNG → DÙNG OCR ĐỌC ẢNH
-    if (fullText.trim().length < 50) {
-        console.log('PDF không có text, chuyển sang OCR...');
-        document.getElementById('loadingTicker').innerText = `Đang OCR ảnh PDF... lâu hơn xíu`;
-        
-        fullText = '';
-        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({scale: 2.0}); // Scale to cho OCR chính xác
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            await page.render({canvasContext: context, viewport: viewport}).promise;
-            
-            // OCR tiếng Việt + Anh
-            const { data: { text } } = await Tesseract.recognize(canvas, 'vie+eng');
-            fullText += text + '\n';
-            console.log(`OCR Trang ${i}:`, text);
-        }
-    }
-    
-    if (fullText.trim().length < 50) {
-        throw new Error('Không đọc được chữ từ PDF. File lỗi hoặc chất lượng quá kém.');
-    }
-
-    const data = {
-        ticker: extractTicker(fullText),
-        quarter: extractQuarter(fullText),
-        revenue: extractNumber(fullText, ['doanh', 'thu']),
-        net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
-        debt_ratio: 0.5,
-        ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền']),
-        roe: 0,
-        flags: [],
-        score: 0
-    };
-
-    if (!data.revenue ||!data.net_profit) {
-        throw new Error('OCR xong vẫn không tìm thấy Doanh thu hoặc Lợi nhuận. Check Console xem text OCR ra gì');
-    }
-
-    data.score = calculateScore(data);
-    if (data.ocf < 0) data.flags.push('Dòng tiền âm');
-    return data;
-}
-
-    function extractTicker(text) {
-        const match = text.match(/Mã CK[:\s]*([A-Z]{3})/i);
-        return match? match[1] : null;
-    }
-
-    function extractQuarter(text) {
-        const match = text.match(/(Quý|Q)\s*([1-4]).*?(\d{4})/i);
-        return match? `Q${match[2]}/${match[3]}` : 'Q2/2024';
-    }
-
-function extractNumber(text, keywords) {
-    // Tạo regex tìm từ khóa + số gần nhất trong vòng 200 ký tự
-    const pattern = keywords.join('[\\s\\S]{0,50}?') + '[\\s\\S]{0,200}?([\\d]{1,3}(?:[,.\\s]\\d{3})*(?:[,.]\\d+)?)';
-    const regex = new RegExp(pattern, 'i');
-    const match = text.match(regex);
-    if (!match) return 0;
-    // Xóa hết dấu., và space
-    const numStr = match[1].replace(/[,\.\s]/g, '');
-    return parseInt(numStr) || 0;
-}
-    function calculateScore(data) {
-        let score = 50;
-        if (data.net_profit > 0) score += 25;
-        if (data.ocf > 0) score += 25;
-        return Math.min(score, 100);
-    }
 
     function resetSteps() {
         ['step1','step2','step3'].forEach(id => {
@@ -396,20 +324,19 @@ function extractNumber(text, keywords) {
         animateLoadingSteps();
 
         try {
-            const financialData = extractedData || {
-                ticker: ticker, quarter: "Q2/2024", revenue: [15200], net_profit: [1610],
-                debt_ratio: 0.42, ocf: -200, roe: 23.5, flags: ["Dòng tiền âm"], score: 72
-            };
-
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(financialData)
+                body: JSON.stringify({ ticker })
             });
 
-            if (!response.ok) throw new Error(`API lỗi: ${response.status}`);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || `API lỗi: ${response.status}`);
+            }
+            
             const data = await response.json();
-            updateResultsUI(financialData, data.explanation);
+            updateResultsUI(data.raw_data, data.explanation);
 
             setTimeout(() => {
                 loadingScreen.classList.add('hidden');
@@ -422,10 +349,11 @@ function extractNumber(text, keywords) {
         }
     }
 
-    function updateResultsUI(finData, aiText) {
-        document.getElementById('resultTicker').innerText = `${finData.ticker} Corporation`;
-        document.getElementById('resultQuarter').innerText = finData.quarter;
-        const score = finData.score;
+    function updateResultsUI(data, aiText) {
+        document.getElementById('resultTicker').innerText = `${data.ticker} Corporation`;
+        document.getElementById('resultQuarter').innerText = data.quarter || 'Q gần nhất';
+        
+        const score = data.score || 0;
         document.getElementById('scoreValue').innerText = score;
         document.getElementById('scoreCircle').style.strokeDashoffset = 534.07 - (534.07 * score / 100);
 
@@ -433,12 +361,28 @@ function extractNumber(text, keywords) {
         if (score >= 70) {
             scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-500/20 text-emerald-400';
             scoreBadge.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i> Khỏe mạnh';
-        } else {
+        } else if (score >= 50) {
             scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400';
-            scoreBadge.innerHTML = '<i data-lucide="shield-alert" class="w-4 h-4"></i> Cần lưu ý';
+            scoreBadge.innerHTML = '<i data-lucide="shield-alert" class="w-4 h-4"></i> Trung bình';
+        } else {
+            scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-red-500/20 text-red-400';
+            scoreBadge.innerHTML = '<i data-lucide="shield-x" class="w-4 h-4"></i> Rủi ro';
         }
 
+        document.getElementById('revenueValue').innerText = `${data.revenue?.toFixed(1) || 0} tỷ`;
+        document.getElementById('roeValue').innerText = `${data.roe || 0}%`;
+        document.getElementById('debtValue').innerText = `${data.debt_ratio?.toFixed(2) || 0}`;
+
         document.getElementById('aiExplanationText').innerText = aiText;
+
+        // Red flags
+        if (data.flags && data.flags.length > 0) {
+            document.getElementById('redFlagBox').classList.remove('hidden');
+            document.getElementById('redFlagText').innerText = data.flags.join('. ');
+        } else {
+            document.getElementById('redFlagBox').classList.add('hidden');
+        }
+
         lucide.createIcons();
     }
 });
