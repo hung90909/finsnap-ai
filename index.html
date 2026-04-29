@@ -526,56 +526,154 @@
     </div>
 
       <script>
-// ⚠️ BƯỚC 1: Thay link Railway của bạn vào đây
-const API_URL = 'accurate-flow-production-bdc1.up.railway.app';
+ lucide.createIcons();
 
-// ⚠️ BƯỚC 2: Hàm gọi API - Gắn vào nút "Phân tích" của bạn
-async function callFinSnapAI() {
-    // 1. Lấy data từ Rule Engine của bạn. Đây là data mẫu, bạn thay bằng data thật
-    const financialData = {
-        ticker: "FPT",
-        quarter: "Q2/2024",
-        revenue: [13000, 14500, 15200],
-        net_profit: [1200, 1450, 1610],
-        debt_ratio: 0.42,
-        ocf: -200,
-        roe: 23.5,
-        flags: ["Dòng tiền kinh doanh âm", "Nợ vay tăng 30%"],
-        score: 72
-    };
+// ⚠️ THAY LINK RAILWAY CỦA BẠN VÀO ĐÂY - NHỚ CÓ https://
+const API_URL = 'https://accurate-flow-production-bdc1.up.railway.app/explain';
+
+// Data mẫu FPT - sau này bạn thay bằng data thật từ PDF/Rule Engine
+const MOCK_FINANCIAL_DATA = {
+    ticker: "FPT",
+    quarter: "Q2/2024",
+    revenue: [13000, 14500, 15200],
+    net_profit: [1200, 1450, 1610],
+    debt_ratio: 0.42,
+    ocf: -200,
+    roe: 23.5,
+    flags: ["Dòng tiền kinh doanh âm", "Nợ vay tăng 30%"],
+    score: 72
+};
+
+// Elements
+const landingScreen = document.getElementById('landingScreen');
+const loadingScreen = document.getElementById('loadingScreen');
+const resultsScreen = document.getElementById('resultsScreen');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const tickerInput = document.getElementById('tickerInput');
+const backBtn = document.getElementById('backBtn');
+
+// Gắn sự kiện cho nút Phân tích
+analyzeBtn.addEventListener('click', () => {
+    const ticker = tickerInput.value.trim().toUpperCase() || 'FPT';
+    runAnalysis(ticker);
+});
+
+// Gắn sự kiện cho nút Back
+backBtn.addEventListener('click', () => {
+    resultsScreen.classList.add('hidden');
+    landingScreen.classList.remove('hidden');
+    tickerInput.value = '';
+});
+
+// Gắn sự kiện cho quick ticker
+document.querySelectorAll('.quick-ticker').forEach(btn => {
+    btn.addEventListener('click', () => {
+        tickerInput.value = btn.innerText;
+    });
+});
+
+// Gắn sự kiện cho nút Pro
+document.querySelectorAll('#proBtnHeader, #proBtnResults, #proBtnMain, #proBtnRedFlag').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('proModal').classList.remove('hidden');
+    });
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('proModal').classList.add('hidden');
+});
+
+// Hàm chạy phân tích
+async function runAnalysis(ticker) {
+    // 1. Chuyển sang màn loading
+    landingScreen.classList.add('hidden');
+    resultsScreen.classList.add('hidden');
+    loadingScreen.classList.remove('hidden');
+    document.getElementById('loadingTicker').innerText = `Mã: ${ticker} - Q2/2024`;
+    
+    // Fake loading steps cho đẹp
+    animateLoadingSteps();
 
     try {
-        // 2. Hiện loading. Thay #loading bằng id element của bạn
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('result').style.display = 'none';
-
-        // 3. Gọi API Railway
+        // 2. Gọi API thật - Dùng data mock, sau này bạn thay MOCK_FINANCIAL_DATA bằng data thật
+        const requestData = {...MOCK_FINANCIAL_DATA, ticker: ticker};
+        
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(financialData)
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(requestData)
         });
 
-        if (!response.ok) throw new Error('API lỗi: ' + response.status);
-
+        if (!response.ok) throw new Error(`API lỗi: ${response.status}`);
+        
         const data = await response.json();
         
-        // 4. Hiện kết quả. Thay #ai-text bằng id chỗ bạn muốn show text AI
-        document.getElementById('ai-text').innerText = data.explanation;
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('result').style.display = 'block';
+        // 3. Đổ data ra UI
+        updateResultsUI(requestData, data.explanation);
+        
+        // 4. Chuyển sang màn kết quả
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+        }, 500);
 
     } catch (error) {
-        console.error(error);
-        alert('Lỗi kết nối API. Check lại link Railway hoặc F12 xem lỗi gì.');
-        document.getElementById('loading').style.display = 'none';
+        console.error('Lỗi API:', error);
+        alert('Không kết nối được AI. Check lại link Railway hoặc F12 xem lỗi CORS.');
+        loadingScreen.classList.add('hidden');
+        landingScreen.classList.remove('hidden');
     }
 }
 
-// ⚠️ BƯỚC 3: Gắn hàm này vào nút của bạn
-// Ví dụ: <button onclick="callFinSnapAI()">Phân tích</button>
+// Fake animation loading
+function animateLoadingSteps() {
+    const steps = ['step1', 'step2', 'step3'];
+    steps.forEach((stepId, index) => {
+        setTimeout(() => {
+            const step = document.getElementById(stepId);
+            step.classList.remove('opacity-50');
+            step.classList.add('opacity-100');
+            step.querySelector('.step-icon').classList.add('bg-emerald-500/20');
+            step.querySelector('.step-icon i').classList.add('text-emerald-400');
+            step.querySelector('.loading-check').classList.remove('hidden');
+        }, (index + 1) * 800);
+    });
+}
+
+// Update UI với kết quả
+function updateResultsUI(finData, aiText) {
+    // 1. Update ticker info
+    document.getElementById('resultTicker').innerText = `${finData.ticker} Corporation`;
+    document.getElementById('resultQuarter').innerText = finData.quarter;
+    
+    // 2. Update Score
+    const score = finData.score;
+    const scoreCircle = document.getElementById('scoreCircle');
+    const scoreValue = document.getElementById('scoreValue');
+    const scoreBadge = document.getElementById('scoreBadge');
+    
+    scoreValue.innerText = score;
+    const offset = 534.07 - (534.07 * score / 100);
+    scoreCircle.style.strokeDashoffset = offset;
+    
+    // Update badge
+    if (score >= 70) {
+        scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-500/20 text-emerald-400';
+        scoreBadge.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i> Khỏe mạnh';
+    } else if (score >= 50) {
+        scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400';
+        scoreBadge.innerHTML = '<i data-lucide="shield-alert" class="w-4 h-4"></i> Trung bình';
+    } else {
+        scoreBadge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-red-500/20 text-red-400';
+        scoreBadge.innerHTML = '<i data-lucide="shield-x" class="w-4 h-4"></i> Rủi ro';
+    }
+    
+    // 3. Update AI Text
+    document.getElementById('aiExplanationText').innerText = aiText;
+    
+    // Re-render icons
+    lucide.createIcons();
+}
 </script>
 </body>
 </html>
