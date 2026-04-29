@@ -38,7 +38,7 @@ export default {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'openrouter/free',
           messages: [{ role: 'user', content: aiPrompt }],
           max_tokens: 300,
         }),
