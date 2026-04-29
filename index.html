@@ -282,10 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = {
             ticker: extractTicker(fullText),
             quarter: extractQuarter(fullText),
-            revenue: extractNumber(fullText, ['doanh', 'thu']),
-            net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
+            revenue: (fullText, ['doanh', 'thu']),
+            net_profit: (fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
             debt_ratio: 0.5,
-            ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền']),
+            ocf: (fullText, ['lưu', 'chuyển', 'tiền']),
             roe: 0,
             flags: [],
             score: 0
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return match? `Q${match[2]}/${match[3]}` : 'Q2/2024';
     }
 
-    function extractNumber(text, keywords) {
+    function (text, keywords) {
         const regex = new RegExp(keywords.join('.*?') + '.*?(\\d[\\d,\\.\\-]+)', 'i');
         const match = text.match(regex);
         if (!match) return 0;
