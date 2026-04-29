@@ -525,221 +525,57 @@
         </div>
     </div>
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+      <script>
+// ⚠️ BƯỚC 1: Thay link Railway của bạn vào đây
+const API_URL = 'accurate-flow-production-bdc1.up.railway.app';
 
-        // Mock data for FPT Q2/2024
-        const mockData = {
-            FPT: {
-                name: "FPT Corporation",
-                quarter: "Q2/2024",
-                score: 86,
-                grade: "Xuất sắc",
-                gradeColor: "bg-emerald-500/20 text-emerald-400",
-                metrics: {
-                    revenueGrowth: 25.3,
-                    profitMargin: 18.7,
-                    debtRatio: 0.42
-                },
-                hasRedFlag: true
+// ⚠️ BƯỚC 2: Hàm gọi API - Gắn vào nút "Phân tích" của bạn
+async function callFinSnapAI() {
+    // 1. Lấy data từ Rule Engine của bạn. Đây là data mẫu, bạn thay bằng data thật
+    const financialData = {
+        ticker: "FPT",
+        quarter: "Q2/2024",
+        revenue: [13000, 14500, 15200],
+        net_profit: [1200, 1450, 1610],
+        debt_ratio: 0.42,
+        ocf: -200,
+        roe: 23.5,
+        flags: ["Dòng tiền kinh doanh âm", "Nợ vay tăng 30%"],
+        score: 72
+    };
+
+    try {
+        // 2. Hiện loading. Thay #loading bằng id element của bạn
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+
+        // 3. Gọi API Railway
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
             },
-            HPG: {
-                name: "Hòa Phát Group",
-                quarter: "Q2/2024", 
-                score: 72,
-                grade: "Khá tốt",
-                gradeColor: "bg-cyan-500/20 text-cyan-400",
-                metrics: {
-                    revenueGrowth: 12.1,
-                    profitMargin: 9.3,
-                    debtRatio: 0.68
-                },
-                hasRedFlag: false
-            }
-        };
-
-        // DOM Elements
-        const landingScreen = document.getElementById('landingScreen');
-        const loadingScreen = document.getElementById('loadingScreen');
-        const resultsScreen = document.getElementById('resultsScreen');
-        const tickerInput = document.getElementById('tickerInput');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const backBtn = document.getElementById('backBtn');
-        const pdfUpload = document.getElementById('pdfUpload');
-        const proModal = document.getElementById('proModal');
-        const closeModal = document.getElementById('closeModal');
-        const loadingTicker = document.getElementById('loadingTicker');
-
-        // Quick ticker buttons
-        document.querySelectorAll('.quick-ticker').forEach(btn => {
-            btn.addEventListener('click', () => {
-                tickerInput.value = btn.textContent;
-                tickerInput.focus();
-            });
+            body: JSON.stringify(financialData)
         });
 
-        // Enable/disable analyze button
-        tickerInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
-            analyzeBtn.disabled = !e.target.value.trim() && !pdfUpload.files.length;
-        });
+        if (!response.ok) throw new Error('API lỗi: ' + response.status);
 
-        pdfUpload.addEventListener('change', () => {
-            analyzeBtn.disabled = !pdfUpload.files.length && !tickerInput.value.trim();
-        });
-
-        // Analyze button click
-        analyzeBtn.addEventListener('click', () => {
-            const ticker = tickerInput.value.trim() || 'FPT';
-            startAnalysis(ticker);
-        });
-
-        // Enter key on input
-        tickerInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && tickerInput.value.trim()) {
-                startAnalysis(tickerInput.value.trim());
-            }
-        });
-
-        // Main analysis flow
-        function startAnalysis(ticker) {
-            const displayTicker = ticker.toUpperCase();
-            loadingTicker.textContent = `Mã: ${displayTicker} - Q2/2024`;
-            
-            // Show loading screen
-            landingScreen.classList.add('hidden');
-            resultsScreen.classList.add('hidden');
-            loadingScreen.classList.remove('hidden');
-            
-            // Reset loading steps
-            ['step1', 'step2', 'step3'].forEach(id => {
-                const step = document.getElementById(id);
-                step.classList.add('opacity-50');
-                step.querySelector('.step-icon').classList.remove('bg-emerald-500/20');
-                step.querySelector('.loading-check').classList.add('hidden');
-            });
-
-            // Animate steps
-            setTimeout(() => animateStep('step1'), 500);
-            setTimeout(() => animateStep('step2'), 1800);
-            setTimeout(() => animateStep('step3'), 3000);
-            setTimeout(() => showResults(displayTicker), 4200);
-        }
-
-        function animateStep(stepId) {
-            const step = document.getElementById(stepId);
-            step.classList.remove('opacity-50');
-            step.classList.add('opacity-100');
-            step.querySelector('.step-icon').classList.add('bg-emerald-500/20');
-            step.querySelector('.step-icon i').classList.remove('text-slate-500');
-            step.querySelector('.step-icon i').classList.add('text-emerald-400');
-            
-            setTimeout(() => {
-                step.querySelector('.loading-check').classList.remove('hidden');
-            }, 600);
-        }
-
-        function showResults(ticker) {
-            loadingScreen.classList.add('hidden');
-            resultsScreen.classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Get data (default to FPT if not found)
-            const data = mockData[ticker] || mockData.FPT;
-            
-            // Update UI
-            document.getElementById('resultTicker').textContent = data.name;
-            document.getElementById('resultQuarter').textContent = data.quarter;
-            
-            // Animate score circle
-            const scoreCircle = document.getElementById('scoreCircle');
-            const scoreValue = document.getElementById('scoreValue');
-            const scoreBadge = document.getElementById('scoreBadge');
-            
-            const circumference = 2 * Math.PI * 85;
-            const offset = circumference - (data.score / 100) * circumference;
-            
-            setTimeout(() => {
-                scoreCircle.style.strokeDashoffset = offset;
-            }, 300);
-
-            // Animate score number
-            let currentScore = 0;
-            const scoreInterval = setInterval(() => {
-                currentScore += 2;
-                if (currentScore >= data.score) {
-                    currentScore = data.score;
-                    clearInterval(scoreInterval);
-                }
-                scoreValue.textContent = currentScore;
-            }, 20);
-
-            // Update badge
-            scoreBadge.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 ${data.gradeColor}`;
-            scoreBadge.innerHTML = `<i data-lucide="award" class="w-4 h-4"></i>${data.grade}`;
-            lucide.createIcons();
-
-            // Hide red flag if not applicable
-            if (!data.hasRedFlag) {
-                document.querySelector('.bg-red-500\\/10').classList.add('hidden');
-            } else {
-                document.querySelector('.bg-red-500\\/10').classList.remove('hidden');
-            }
-        }
-
-        // Back button
-        backBtn.addEventListener('click', () => {
-            resultsScreen.classList.add('hidden');
-            loadingScreen.classList.add('hidden');
-            landingScreen.classList.remove('hidden');
-            tickerInput.value = '';
-            pdfUpload.value = '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        // Pro modal triggers
-        const proButtons = [
-            'proBtnHeader', 'proBtnResults', 'proBtnMain', 
-            'proBtnRedFlag', 'shareBtn'
-        ];
+        const data = await response.json();
         
-        proButtons.forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    proModal.classList.remove('hidden');
-                });
-            }
-        });
+        // 4. Hiện kết quả. Thay #ai-text bằng id chỗ bạn muốn show text AI
+        document.getElementById('ai-text').innerText = data.explanation;
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('result').style.display = 'block';
 
-        // Close modal
-        closeModal.addEventListener('click', () => {
-            proModal.classList.add('hidden');
-        });
+    } catch (error) {
+        console.error(error);
+        alert('Lỗi kết nối API. Check lại link Railway hoặc F12 xem lỗi gì.');
+        document.getElementById('loading').style.display = 'none';
+    }
+}
 
-        proModal.addEventListener('click', (e) => {
-            if (e.target === proModal) {
-                proModal.classList.add('hidden');
-            }
-        });
-
-        // Share button
-        document.getElementById('shareBtn').addEventListener('click', () => {
-            if (navigator.share) {
-                navigator.share({
-                    title: 'FinSnap - Phân tích FPT Q2/2024',
-                    text: 'Check kết quả phân tích BCTC FPT trên FinSnap - Score 86/100 🔥',
-                    url: window.location.href
-                });
-            } else {
-                proModal.classList.remove('hidden');
-            }
-        });
-
-        // Initial state
-        analyzeBtn.disabled = true;
-    </script>
+// ⚠️ BƯỚC 3: Gắn hàm này vào nút của bạn
+// Ví dụ: <button onclick="callFinSnapAI()">Phân tích</button>
+</script>
 </body>
 </html>
