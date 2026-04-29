@@ -613,15 +613,15 @@ async function extractDataFromPDF(file) {
 
     // REGEX TÌM SỐ LIỆU - Tùy form BCTC mà sửa
     const data = {
-        ticker: extractTicker(fullText),
-        quarter: extractQuarter(fullText),
-        revenue: extractNumber(fullText, /Doanh thu.*?(?:thuần|bán hàng).*?([\d,\.]+)/i),
-        net_profit: extractNumber(fullText, /Lợi nhuận sau thuế.*?([\d,\.]+)/i),
-        debt_ratio: extractRatio(fullText, /Nợ phải trả.*?Vốn chủ.*?([\d,\.]+)/i),
-        ocf: extractNumber(fullText, /Lưu chuyển tiền.*?hoạt động.*?([\d,\.\-]+)/i),
-        roe: 0, // Tính sau
-        flags: [],
-        score: 0 // Tính sau
+          ticker: extractTicker(fullText),
+    quarter: extractQuarter(fullText),
+    revenue: extractNumber(fullText, ['doanh', 'thu']),
+    net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
+    debt_ratio: extractRatio(fullText, ['nợ', 'phải', 'trả']),
+    ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền', 'hoạt', 'động']),
+    roe: 0,
+    flags: [],
+    score: 0
     };
 
     // Validate
@@ -654,10 +654,10 @@ function extractQuarter(text) {
     return match? `Q${match[2]}/${match[3]}` : 'Q2/2024';
 }
 
-function extractNumber(text, regex) {
+function extractNumber(text, keywords) {
+   const regex = new RegExp(keywords.join('.*?') + '.*?(\\d[\\d,\\.]+)', 'i');
     const match = text.match(regex);
     if (!match) return 0;
-    // Xóa dấu, và. rồi parse
     const numStr = match[1].replace(/[,\.]/g, '');
     return parseInt(numStr) || 0;
 }
