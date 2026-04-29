@@ -282,10 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = {
             ticker: extractTicker(fullText),
             quarter: extractQuarter(fullText),
-            revenue: (fullText, ['doanh', 'thu']),
-            net_profit: (fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
+            revenue: extractNumber(fullText, ['doanh', 'thu']),
+            net_profit: extractNumber(fullText, ['lợi', 'nhuận', 'sau', 'thuế']),
             debt_ratio: 0.5,
-            ocf: (fullText, ['lưu', 'chuyển', 'tiền']),
+            ocf: extractNumber(fullText, ['lưu', 'chuyển', 'tiền']),
             roe: 0,
             flags: [],
             score: 0
@@ -310,13 +310,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return match? `Q${match[2]}/${match[3]}` : 'Q2/2024';
     }
 
-    function (text, keywords) {
-        const regex = new RegExp(keywords.join('.*?') + '.*?(\\d[\\d,\\.\\-]+)', 'i');
-        const match = text.match(regex);
-        if (!match) return 0;
-        return parseInt(match[1].replace(/[,\.]/g, '')) || 0;
-    }
-
+function extractNumber(text, keywords) {
+    // Tạo regex tìm từ khóa + số gần nhất trong vòng 200 ký tự
+    const pattern = keywords.join('[\\s\\S]{0,50}?') + '[\\s\\S]{0,200}?([\\d]{1,3}(?:[,.\\s]\\d{3})*(?:[,.]\\d+)?)';
+    const regex = new RegExp(pattern, 'i');
+    const match = text.match(regex);
+    if (!match) return 0;
+    // Xóa hết dấu., và space
+    const numStr = match[1].replace(/[,\.\s]/g, '');
+    return parseInt(numStr) || 0;
+}
     function calculateScore(data) {
         let score = 50;
         if (data.net_profit > 0) score += 25;
