@@ -1,102 +1,119 @@
 export default {
-  async fetch(request, env) {
-    // 1. Cho phép CORS
+  async fetch(request) {
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
-        }
+        },
       });
     }
 
-    // 2. Test GET
-    if (request.method === 'GET') {
-      return new Response('FinSnap Worker is running! ✅', {
-        headers: { 'Content-Type': 'text/plain' }
-      });
-    }
-
-    // 3. Chỉ nhận POST
     if (request.method!== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
     try {
-      // 4. Lấy data từ frontend gửi lên
-      const body = await request.json();
+      const { ticker } = await request.json();
+      if (!ticker) throw new Error('Thiếu mã CP');
 
-      const systemPrompt = `Bạn là chuyên gia tài chính nhưng giải thích cho người mới chơi chứng khoán F0-F2.
-QUY TẮC: 1. CHỈ dùng số liệu được cung cấp. Cấm bịa. 2. Giọng GenZ, dễ hiểu. 3. Nếu có flags thì PHẢI nhắc rủi ro. 4. CẤM từ: mua, bán, khuyến nghị, nên đầu tư. 5. Luôn kết: "Cần theo dõi thêm báo cáo quý tới." 6. Output 2-3 câu.`;
+      // BƯỚC 1: LẤY DỮ LIỆU BCTC TỪ CAFEF
+      const financialData = await getFinancialDataFromCafef(ticker);
 
-      const userPrompt = `Mã: ${body.ticker} ${body.quarter}
-Doanh thu: ${body.revenue}, Lợi nhuận: ${body.net_profit}
-Nợ/Tài sản: ${body.debt_ratio}, Dòng tiền HĐKD: ${body.ocf} tỷ, ROE: ${body.roe}%
-Điểm: ${body.score}/100, Cờ: ${body.flags?.join(', ') || 'Không'}`;
+      // BƯỚC 2: GỌI AI PHÂN TÍCH
+      const aiPrompt = `Bạn là chuyên gia tài chính GenZ. Phân tích cổ phiếu ${ticker} dựa trên số liệu sau:
+      - Doanh thu Q gần nhất: ${financialData.revenue} tỷ
+      - Lợi nhuận sau thuế: ${financialData.net_profit} tỷ
+      - Nợ/VCSH: ${financialData.debt_ratio}
+      - ROE: ${financialData.roe}%
+      - Dòng tiền HĐKD: ${financialData.ocf} tỷ
 
-      const messages = [
-        {"role": "system", "content": systemPrompt},
-        {"role": "user", "content": userPrompt}
-      ];
+      Viết 3-4 câu, giọng văn GenZ, hài hước, dùng emoji. Kết luận: đáng đầu tư hay né.`;
 
-      // 5. Gọi OpenRouter
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${env.OPENAI_KEY}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.OPENROUTER_KEY}`,
-          'HTTP-Referer': 'https://hung90909.github.io',
-          'X-Title': 'FinSnap',
         },
         body: JSON.stringify({
-          model: 'openrouter/free',
-          messages: messages,
-          temperature: 0.3,
-          max_tokens: 150,
-        })
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: aiPrompt }],
+          max_tokens: 300,
+        }),
       });
 
-      const data = await response.json();
+      const aiData = await aiResponse.json();
+      const explanation = aiData.choices[0].message.content;
 
-      // 6. Xử lý lỗi từ OpenRouter
-      if (!response.ok) {
-        return new Response(JSON.stringify({ error: data.error?.message || 'OpenRouter error' }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          }
-        });
-      }
-
-      let text = data.choices?.[0]?.message?.content || 'Không có phản hồi từ AI';
-
-      // 7. Filter từ cấm
-      if (text.toLowerCase().includes('mua') || text.toLowerCase().includes('bán') || text.toLowerCase().includes('khuyến nghị')) {
-        text = 'Công ty có điểm tốt và điểm cần lưu ý theo dữ liệu. Cần theo dõi thêm báo cáo quý tới.';
-      }
-
-      // 8. Trả về cho frontend
       return new Response(JSON.stringify({
-        explanation: text.trim()
+        explanation,
+        raw_data: financialData // Trả về cho frontend hiển thị
       }), {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
-        }
+        },
       });
 
     } catch (error) {
-      return new Response(JSON.stringify({
-        error: 'Worker error: ' + error.message
-      }), {
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        }
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
+  },
+};
+
+// HÀM LẤY DATA TỪ CAFEF
+async function getFinancialDataFromCafef(ticker) {
+  // Endpoint lấy BCTC của Cafef - Q gần nhất
+  const url = `https://s.cafef.vn/Ajax/PageNew/DataHose.ashx?symbol=${ticker}&PageIndex=1&PageSize=1&Type=2`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0',
+      'Referer': 'https://s.cafef.vn/'
+    }
+  });
+
+  const html = await res.text();
+
+  // Parse HTML lấy số - Cafef trả về bảng HTML
+  // Regex này lấy Doanh thu, LNST từ bảng BCTC
+  const revenueMatch = html.match(/Doanh thu thuần.*?>([\d,\.]+)</);
+  const profitMatch = html.match(/Lợi nhuận sau thuế.*?>([\d,\.]+)</);
+  const equityMatch = html.match(/Vốn chủ sở hữu.*?>([\d,\.]+)</);
+  const debtMatch = html.match(/Nợ phải trả.*?>([\d,\.]+)</);
+  const ocfMatch = html.match(/Lưu chuyển tiền.*?hoạt động.*?>([\d,\.\-]+)</);
+
+  const revenue = revenueMatch? parseFloat(revenueMatch[1].replace(/,/g, '')) : 0;
+  const net_profit = profitMatch? parseFloat(profitMatch[1].replace(/,/g, '')) : 0;
+  const equity = equityMatch? parseFloat(equityMatch[1].replace(/,/g, '')) : 1;
+  const debt = debtMatch? parseFloat(debtMatch[1].replace(/,/g, '')) : 0;
+  const ocf = ocfMatch? parseFloat(ocfMatch[1].replace(/,/g, '')) : 0;
+
+  if (!revenue ||!net_profit) {
+    throw new Error(`Không lấy được BCTC của ${ticker} từ Cafef`);
   }
+
+  return {
+    ticker: ticker,
+    quarter: 'Q gần nhất',
+    revenue: revenue / 1e9, // Đổi sang tỷ
+    net_profit: net_profit / 1e9,
+    debt_ratio: debt / equity,
+    ocf: ocf / 1e9,
+    roe: (net_profit / equity * 100).toFixed(1),
+    score: calculateScore({net_profit, ocf, debt_ratio: debt/equity})
+  };
+}
+
+function calculateScore(data) {
+  let score = 50;
+  if (data.net_profit > 0) score += 20;
+  if (data.ocf > 0) score += 15;
+  if (data.debt_ratio < 1) score += 15;
+  return Math.min(score, 100);
 }
